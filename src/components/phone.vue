@@ -62,6 +62,7 @@
       <div style="position: relative">
         <div style="position: absolute; left: -30px; top: 10px">
           <img
+            @click="handleClose"
             id="close"
             src="@/assets/model/关闭.png"
             alt=""
@@ -118,7 +119,6 @@ const PhoneAssets = {
   opacity: require('@/assets/model/opacity.png'),
   roughness: require('@/assets/model/roughness.png'),
 }
-// import myfont from 'three/examples/fonts/gentilis_bold.typeface.json'
 export default {
   name: 'PhoneWl',
   data() {
@@ -126,6 +126,7 @@ export default {
       isRatate: true,
       choseindex: 0,
       autoChangeTime: 0,
+      handleClose: () => {},
     }
   },
   mounted() {
@@ -144,11 +145,11 @@ export default {
     let css2dRender = new CSS2DRenderer()
     css2dRender.setSize(window.innerWidth, window.innerHeight)
     css2dRender.domElement.style.position = 'absolute'
-    css2dRender.domElement.style.pointerEvents = 'none'
 
     // 相对标签原位置位置偏移大小
     css2dRender.domElement.style.top = '0px'
     css2dRender.domElement.style.left = '252px' //HTML标签尺寸宽度一半
+    css2dRender.domElement.style.display = 'none'
     this.$refs['dom'].appendChild(css2dRender.domElement)
 
     let cameraControl = new OrbitControls(camera, render.domElement)
@@ -171,6 +172,7 @@ export default {
     let gltfScene = null //产品模型对象
     let phoneMesh = null
     let phoneLight = null
+    let phoneLightLabel = null
     let frontObject3D = null
     let modelGroup = new Group() //
     phoneLoader.load(PhoneAssets.glb, (glb) => {
@@ -190,17 +192,14 @@ export default {
       // 创建一个HTML元素作为标签标注相机对应sprite对象
       // 选择id为camera的一个HTML元素作为标签标注相机对象热点位置
       var div = document.getElementById('camera')
-      div.style.visibility = 'hidden'
       //div元素包装为CSS2模型对象CSS2DObject
-      var label = new CSS2DObject(div)
-      console.log('frontObject3D.position', frontObject3D.position, label)
+      phoneLightLabel = new CSS2DObject(div)
       // 设置HTML元素标签在three.js世界坐标中位置
-      label.position.copy(frontObject3D.position)
-      label.position.y = -label.position.y
-      label.position.x -= 10
-      label.position.z = -label.position.z - 3
-      console.log('label', label)
-      modelGroup.add(label)
+      phoneLightLabel.position.copy(frontObject3D.position)
+      phoneLightLabel.position.y = -phoneLightLabel.position.y
+      phoneLightLabel.position.x -= 10
+      phoneLightLabel.position.z = -phoneLightLabel.position.z - 3
+      modelGroup.add(phoneLightLabel)
 
       let texLoader = new TextureLoader() //纹理贴图加载器
       phoneMesh.material = new MeshStandardMaterial({
@@ -290,7 +289,6 @@ export default {
       phoneMesh && (phoneMesh.material.map = ChangeMap[`map${index + 1}`])
     }
     const autoChange = () => {
-      this.autoChangeTime += this.clockTime.getDelta()
       if (this.autoChangeTime >= 0 && this.autoChangeTime < 4) {
         changeMapAuto(0)
       } else if (this.autoChangeTime >= 2 && this.autoChangeTime < 8) {
@@ -302,14 +300,16 @@ export default {
       } else if (this.autoChangeTime >= 16) {
         this.autoChangeTime = 0
       }
+      this.autoChangeTime += 2
     }
-
+    setInterval(() => {
+      autoChange()
+    }, 2000)
     initRender()
     function initRender() {
       css2dRender.render(scene, camera) //渲染HTML标签对象
       render.render(scene, camera)
       cameraControl.update()
-      autoChange()
       requestAnimationFrame(initRender)
     }
     let ratateAnimate = null
@@ -356,6 +356,11 @@ export default {
       this.choseindex = index
       phoneMesh.material.map = ChangeMap[`map${index + 1}`]
       this.autoChangeTime = index * 2
+      console.log('autoChangeTime', this.autoChangeTime)
+    }
+    this.handleClose = () => {
+      phoneLightLabel.element.style.visibility = 'hidden'
+      css2dRender.domElement.style.display = 'none'
     }
     this.handleChangeRatate = (flag) => {
       this.isRatate = flag
@@ -377,14 +382,16 @@ export default {
       raycaster.setFromCamera(new Vector2(x, y), camera)
       //返回.intersectObjects()参数中射线选中的网格模型对象
       // 未选中对象返回空数组[],选中一个数组1个元素，选中两个数组两个元素
-      var intersects = raycaster.intersectObjects([frontObject3D, phoneMesh])
-      console.log('intersects', intersects)
+      var intersects = raycaster.intersectObjects([phoneLight])
       if (intersects.length > 0) {
         // 选中模型的第一个设置为半透明
-        intersects[0].object.material.transparent = true
-        intersects[0].object.material.opacity = 0.6
+        phoneLightLabel.element.style.visibility = 'visible'
+        // intersects[0].object.material.transparent = true
+        // intersects[0].object.material.opacity = 0.6
+        css2dRender.domElement.style.display = 'block'
       }
     })
+
     window.onresize = () => {
       render.setSize(window.innerWidth, window.innerHeight)
       camera.aspect = window.innerWidth / window.innerHeight

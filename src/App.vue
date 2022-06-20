@@ -5,7 +5,7 @@
 </template>
 
 <script>
-import PhoneWl from './components/text.vue'
+import PhoneWl from './components/phone.vue'
 export default {
   name: 'App',
   components: {
